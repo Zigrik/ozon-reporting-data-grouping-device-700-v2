@@ -1,0 +1,1 @@
+# ozon-reporting-data-grouping-device-700-v2
