@@ -8,21 +8,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/xuri/excelize/v2"
 )
 
-func removeAllSpaces(str string) string {
-	return strings.Map(func(r rune) rune {
-		if unicode.IsSpace(r) {
-			return -1
-		}
-		return r
-	}, str)
-}
-
 func main() {
+	fmt.Println("Ozon reporting data grouping device 700 v0.4.1")
 	dir, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Ошибка при получении текущей директории:", err)
@@ -61,6 +52,16 @@ type GroupingSetting struct {
 	SourceColumn string
 	TargetColumn string
 	MarkAsD      bool
+}
+
+// Очистка заголовков
+func cleanHeader(header string) string {
+	// Убираем переносы строк и лишние пробелы
+	header = strings.ReplaceAll(header, "\n", " ")
+	header = strings.ReplaceAll(header, "\r", "")
+	header = strings.TrimSpace(header)
+	// Заменяем множественные пробелы на один
+	return strings.Join(strings.Fields(header), " ")
 }
 
 func readGroupingSettings(filename string) ([]GroupingSetting, error) {
@@ -156,6 +157,9 @@ func processReturns(f *excelize.File) {
 	}
 
 	headers := rows[1]
+	for i, header := range headers {
+		headers[i] = cleanHeader(header)
+	}
 	colIndexes := make(map[string]int)
 	for i, header := range headers {
 		colIndexes[header] = i + 1
@@ -286,6 +290,9 @@ func processAcquiring(f *excelize.File) {
 	}
 
 	headers := rows[1]
+	for i, header := range headers {
+		headers[i] = cleanHeader(header)
+	}
 	colIndexes := make(map[string]int)
 	for i, header := range headers {
 		colIndexes[header] = i + 1
@@ -348,14 +355,8 @@ func processAcquiring(f *excelize.File) {
 		}
 	}
 
-	// Формируем заголовки (все столбцы)
-	var outputHeaders []string
-	for _, header := range headers {
-		outputHeaders = append(outputHeaders, header)
-	}
-
 	// Записываем заголовки
-	for i, header := range outputHeaders {
+	for i, header := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
 		f.SetCellValue("grouping эквайринг", cell, header)
 	}
@@ -409,6 +410,9 @@ func groupData(f *excelize.File, groupingSettings []GroupingSetting) {
 	}
 
 	headers := rows[1]
+	for i, header := range headers {
+		headers[i] = cleanHeader(header)
+	}
 	colIndexes := make(map[string]int)
 	for i, header := range headers {
 		colIndexes[header] = i + 1
@@ -508,11 +512,6 @@ func groupData(f *excelize.File, groupingSettings []GroupingSetting) {
 			continue
 		}
 		sum = sum / 100
-
-		parts := strings.Split(id, "-")
-		if len(parts) > 2 {
-			id = strings.Join(parts[:2], "-")
-		}
 
 		if _, exists := groups[id]; !exists {
 			groups[id] = &GroupData{
