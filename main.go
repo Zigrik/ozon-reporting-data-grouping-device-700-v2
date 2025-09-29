@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Ozon reporting data grouping device 700 v0.4.1")
+	fmt.Println("Ozon reporting data grouping device 700 v0.4.2")
 	dir, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Ошибка при получении текущей директории:", err)
@@ -76,6 +76,12 @@ func readGroupingSettings(filename string) ([]GroupingSetting, error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		// Удаляем BOM (Byte Order Mark) если присутствует
+		if strings.HasPrefix(line, "\uFEFF") {
+			line = strings.TrimPrefix(line, "\uFEFF")
+		}
+
 		parts := strings.Split(line, "#")
 		if len(parts) < 2 {
 			continue
@@ -87,7 +93,6 @@ func readGroupingSettings(filename string) ([]GroupingSetting, error) {
 		fmt.Print("|")
 		fmt.Println(target)
 		markAsD := false
-
 		if len(parts) >= 3 && strings.TrimSpace(parts[2]) == "Д" {
 			markAsD = true
 		}
@@ -441,6 +446,10 @@ func groupData(f *excelize.File, groupingSettings []GroupingSetting) {
 	columnMapping := make(map[string]GroupingSetting)
 	for _, setting := range groupingSettings {
 		columnMapping[setting.SourceColumn] = setting
+	}
+
+	for v, _ := range columnMapping {
+		fmt.Println(v, "|")
 	}
 
 	finalColumns := make(map[string]bool)
