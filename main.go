@@ -170,7 +170,7 @@ func processReturns(f *excelize.File) {
 		colIndexes[header] = i + 1
 	}
 
-	requiredCols := []string{"ID начисления", "Группа услуг", "Сумма итого, руб"}
+	requiredCols := []string{"ID начисления", "Группа услуг", "Тип начисления", "Сумма итого, руб"}
 	for _, col := range requiredCols {
 		if _, exists := colIndexes[col]; !exists {
 			fmt.Printf("Не найден обязательный столбец: %s\n", col)
@@ -192,7 +192,10 @@ func processReturns(f *excelize.File) {
 		}
 
 		group := row[colIndexes["Группа услуг"]-1]
-		if group != "Возвраты" {
+		tipNach := row[colIndexes["Тип начисления"]-1]
+
+		// Проверяем оба условия: Группа услуг = Возвраты ИЛИ Тип начисления = Возврат вознаграждения
+		if group != "Возвраты" && tipNach != "Возврат вознаграждения" {
 			continue
 		}
 
@@ -267,7 +270,7 @@ func processReturns(f *excelize.File) {
 		rowNum++
 	}
 
-	fmt.Printf("Найдено и перенесено %d возвратов\n", len(returnsMap))
+	fmt.Printf("Найдено и перенесено %d возвратов (включая возвраты вознаграждения)\n", len(returnsMap))
 }
 
 // отделяем эквайринг
@@ -500,8 +503,8 @@ func groupData(f *excelize.File, groupingSettings []GroupingSetting) {
 
 		group := row[colIndexes["Группа услуг"]-1]
 		tipNach := row[colIndexes["Тип начисления"]-1]
-		if group == "Возвраты" || tipNach == "Эквайринг" {
-			continue // Пропускаем возвраты и эквайринг
+		if group == "Возвраты" || tipNach == "Эквайринг" || tipNach == "Возврат вознаграждения" {
+			continue
 		}
 
 		id := row[colIndexes["ID начисления"]-1]
