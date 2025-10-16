@@ -179,9 +179,11 @@ func processReturns(f *excelize.File) {
 	}
 
 	type ReturnData struct {
-		ID       string
-		Sum      float64
-		FullData []string
+		ID                 string
+		Sum                float64
+		VoznagrazhdenieSum float64 // Новая колонка для возврата вознаграждения
+		FullData           []string
+		HasVoznagrazhdenie bool // Флаг, что есть возврат вознаграждения
 	}
 
 	returnsMap := make(map[string]ReturnData)
@@ -217,26 +219,40 @@ func processReturns(f *excelize.File) {
 		sum = sum / 100
 
 		if existing, exists := returnsMap[id]; exists {
-			// Суммируем суммы для одинаковых ID
-			existing.Sum += sum
+			if tipNach == "Возврат вознаграждения" {
+				// Суммируем в отдельную колонку для возврата вознаграждения
+				existing.VoznagrazhdenieSum += sum
+				existing.HasVoznagrazhdenie = true
+			} else {
+				// Суммируем в основную сумму для возвратов
+				existing.Sum += sum
+			}
 			returnsMap[id] = existing
 		} else {
 			// Новая запись
-			returnsMap[id] = ReturnData{
+			returnData := ReturnData{
 				ID:       id,
 				Sum:      sum,
 				FullData: row,
 			}
+			if tipNach == "Возврат вознаграждения" {
+				returnData.VoznagrazhdenieSum = sum
+				returnData.HasVoznagrazhdenie = true
+				returnData.Sum = 0 // Основная сумма для возврата вознаграждения = 0
+			}
+			returnsMap[id] = returnData
 		}
 	}
 
-	// Формируем заголовки (без "Тип начисления")
+	// Формируем заголовки (без "Тип начисления", но с новой колонкой)
 	var outputHeaders []string
 	for _, header := range headers {
 		if header != "Тип начисления" {
 			outputHeaders = append(outputHeaders, header)
 		}
 	}
+	// Добавляем новую колонку для возврата вознаграждения
+	outputHeaders = append(outputHeaders, "Возврат вознаграждения, руб")
 
 	// Записываем заголовки
 	for i, header := range outputHeaders {
@@ -267,6 +283,11 @@ func processReturns(f *excelize.File) {
 			}
 			colNum++
 		}
+
+		// Записываем возврат вознаграждения в последнюю колонку
+		cell, _ := excelize.CoordinatesToCellName(colNum, rowNum)
+		f.SetCellValue("grouping возвраты", cell, ret.VoznagrazhdenieSum)
+
 		rowNum++
 	}
 
